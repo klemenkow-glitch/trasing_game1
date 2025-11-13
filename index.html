@@ -6,7 +6,7 @@
     <title>Pustolovščina Sledenja za Malčke</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* --- ODZIVNO OBLIKOVANJE IN PRILAGODITEV --- */
+        /* --- ODZIVNO OBLIKOVANJE IN FONTOVI --- */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;700&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap');
         
@@ -19,7 +19,7 @@
             display: flex;
             flex-direction: column;
             align-items: center; 
-            overflow-x: hidden; 
+            overflow-x: hidden; /* Odstrani horizontalno drsenje */
         }
 
         .main-content-wrapper {
@@ -36,6 +36,7 @@
             background-color: #ffffff;
             border: 4px solid #4f46e5;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            /* Kvadratni prikaz, ki se prilagodi velikosti zaslona */
             width: min(95vh, 95vw);
             max-width: 600px;
             aspect-ratio: 1 / 1;
@@ -53,7 +54,7 @@
             z-index: 2;
         }
 
-        /* Target Display (predloga) - ODSTRANJENI STILI ZA VOTLE ČRKE */
+        /* Target Display (predloga) */
         #targetDisplay {
             position: absolute;
             top: 0;
@@ -69,15 +70,15 @@
             z-index: 1;
             font-family: 'Inter', sans-serif;
             font-weight: 300;
-            color: rgba(147, 197, 253, 0.8); /* Standardna barva teksta */
+            color: rgba(147, 197, 253, 0.8); 
             text-rendering: optimizeLegibility;
             text-shadow: none;
         }
         
-        /* Cursive font - ZAGOTAVLJANJE PRAVE PISANE PISAVE */
+        /* Cursive font - Pisana pisava (Dancing Script) */
         .cursive-font {
             font-family: 'Dancing Script', cursive !important;
-            font-weight: 700 !important; /* Bold za boljšo vidljivost sledi */
+            font-weight: 700 !important;
             color: rgba(100, 100, 100, 0.8); 
             -webkit-text-stroke: 0.5px rgba(100, 100, 100, 0.4); 
             -webkit-text-fill-color: initial; 
@@ -140,7 +141,7 @@
             box-shadow: 0 6px 10px -2px rgba(0, 0, 0, 0.1);
         }
 
-        /* Postavitev gumbov za mobilne naprave */
+        /* Prilagoditev gumbov za mobilne naprave */
         #gameScreen .flex.space-x-4 {
             display: flex;
             flex-wrap: wrap; 
@@ -169,10 +170,6 @@
 
 </head>
 <body>
-
-<audio id="successSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_249007ae08.mp3" preload="auto"></audio>
-<audio id="rocketSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_b287413669.mp3" preload="auto"></audio>
-<audio id="prizeSound" src="https://cdn.pixabay.com/audio/2022/03/10/audio_f551b96a84.mp3" preload="auto"></audio>
 
 <div class="main-content-wrapper">
     <header class="text-center mb-8 w-full max-w-xl">
@@ -334,8 +331,7 @@
     // NABOR ZA TISKANE ČRKE (Vključuje SL črke)
     const ALPHABET_PRINTED_SL = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'Č', 'Š', 'Ž', 'č', 'š', 'ž'];
     
-    // NABOR ZA PISANE ČRKE: Uporabljamo navadne tiskane znake, da se bodo pravilno prikazale kvačice (Č, Š, Ž),
-    // vizualno obliko pa zagotovi font 'Dancing Script'.
+    // NABOR ZA PISANE ČRKE: Uporabljamo navadne tiskane znake, da se bodo pravilno prikazale kvačice,
     const ALPHABET_CURSIVE_SL = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'Č', 'Š', 'Ž', 'č', 'š', 'ž'];
     
     // ŠTEVILA IN OBLIKE SO NESPREMENJENE
@@ -376,10 +372,6 @@
     const confettiText = document.getElementById('confettiText');
     const confettiChildName = document.getElementById('confettiChildName');
     
-    const successSound = document.getElementById('successSound');
-    const rocketSound = document.getElementById('rocketSound');
-    const prizeSound = document.getElementById('prizeSound');
-
     let isDrawing = false;
     let currentCategory = null;
     let categoryKey = ''; 
@@ -389,48 +381,12 @@
     
     const CATEGORY_INSTRUCTION_TEXT = "Vnesite ime in izberite kategorijo!";
     
-    let FemaleVoice = null;
-    window.speechSynthesis.onvoiceschanged = () => {
-        FemaleVoice = window.speechSynthesis.getVoices().find(voice => voice.lang === 'sl-SI' && (voice.name.toLowerCase().includes('female') || voice.name.toLowerCase().includes('žena')));
-        if (!FemaleVoice) {
-            FemaleVoice = window.speechSynthesis.getVoices().find(voice => voice.name.toLowerCase().includes('female') || voice.name.toLowerCase().includes('žena'));
-        }
-    };
-
-
     function safePlay(audioElement) {
-        if (!audioElement) return;
-        audioElement.pause();
-        audioElement.currentTime = 0;
-        
-        const playPromise = audioElement.play();
-
-        if (playPromise !== undefined) {
-            playPromise.then(_ => {
-            }).catch(error => {
-                console.warn("Audio playback blocked or failed. User interaction might be required.", error);
-            });
-        }
+        return;
     }
     
     function speak(text) {
-        if (!('speechSynthesis' in window)) {
-            console.log("Govorna sinteza ni podprta v tem brskalniku.");
-            return;
-        }
-        window.speechSynthesis.cancel(); 
-        
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'sl-SI';
-        if (FemaleVoice) {
-            utterance.voice = FemaleVoice;
-        } else {
-             utterance.lang = 'sl-SI'; 
-        }
-        
-        setTimeout(() => {
-             window.speechSynthesis.speak(utterance);
-        }, 100); 
+        return;
     }
     
     let confettiInterval = null;
@@ -477,7 +433,6 @@
     }
 
     function getRandomItem(sourceArray, passedArray) {
-        // Logika je pravilna: izbere element, ki še ni v passedArray.
         const remainingItems = sourceArray.filter(item => !passedArray.includes(item));
         if (remainingItems.length === 0) return null;
 
@@ -518,6 +473,7 @@
     }
 
     function updateChildName() {
+        // Shrani vsebino polja v localStorage in globalno spremenljivko
         childName = childNameInput.value.trim();
         localStorage.setItem('childName', childName);
     }
@@ -543,18 +499,24 @@
         
         stopCountdown(); 
         
-        // 3. Posodobitev polja za ime: Ohranimo shranjeno ime v spominu (childName),
-        //    vendar IZBRIŠEMO VREDNOST polja, da se prikaže placeholder "Vpiši ime".
-        childNameInput.value = ''; 
-        const savedName = localStorage.getItem('childName');
-        if (savedName) {
-            childName = savedName; 
-        } else {
-            childName = '';
-        }
+        // 3. Posodobitev imena in Pozdrav
+        const savedName = localStorage.getItem('childName') || '';
+        childName = savedName.trim();
         
-        const nameToUse = childName || 'Prijatelj';
-        instructionText.textContent = `Dobrodošel, ${nameToUse}! Izberi kategorijo!`;
+        // Polje za vnos imena mora biti PRAZNO, da se prikaže PLACEHOLDER
+        childNameInput.value = ''; 
+        
+        let greetingText = "Dobrodošel";
+        if (childName.length > 0) {
+             greetingText += `, ${childName}`;
+             confettiChildName.textContent = childName; 
+        } else {
+             confettiChildName.textContent = 'Ti'; 
+        }
+        greetingText += "! Izberi kategorijo!";
+
+        instructionText.textContent = greetingText;
+        speak(greetingText);
 
         messageBox.classList.add('hidden');
         numberErrorDiv.classList.add('hidden');
@@ -578,7 +540,6 @@
         return 'categoryScreen';
     }
 
-    // POPRAVLJENA LOGIKA FUNKCIJE goBack()
     function goBack() {
         // 1. Shranjevanje trenutnega stanja (če je bilo na zaslonu)
         if (currentCategory && categoryKey && lastCompletedItem && !currentCategory.passedItems.includes(lastCompletedItem)) {
@@ -601,16 +562,20 @@
         navigationHistory = []; 
         
         const screenElement = document.getElementById(targetScreen);
+        
+        // Določitev besedila navodil za prejšnji zaslon
+        let instructionTextContent = '';
+        if (targetScreen === 'numberSelectionScreen') {
+            instructionTextContent = `Izberi obseg za Številke (10 sekund na številko)!`; 
+        } else if (targetScreen === 'shapeSelectionScreen') {
+            instructionTextContent = `Izberi vrsto oblik, ki jo želiš slediti!`; 
+        } else if (targetScreen === 'letterSelectionScreen') {
+            instructionTextContent = `Izberi vrsto črk, ki jo želiš slediti!`; 
+        }
 
         if (screenElement && targetScreen !== 'categoryScreen') {
             screenElement.classList.remove('hidden');
-            if (targetScreen === 'numberSelectionScreen') {
-                instructionText.textContent = `Izberi obseg za Številke (10 sekund na številko)!`; 
-            } else if (targetScreen === 'shapeSelectionScreen') {
-                instructionText.textContent = `Izberi vrsto oblik, ki jo želiš slediti!`; 
-            } else if (targetScreen === 'letterSelectionScreen') {
-                instructionText.textContent = `Izberi vrsto črk, ki jo želiš slediti!`; 
-            }
+            instructionText.textContent = instructionTextContent;
         } else {
             showCategories(); 
         }
@@ -627,7 +592,6 @@
             document.getElementById('shapeSelectionScreen').classList.remove('hidden');
             instructionText.textContent = `Izberi vrsto oblik, ki jo želiš slediti!`; 
         } else if (key === 'Letters') { 
-            // PREUSMERITEV NA NOVI ZASLON ZA IZBIRO ČRK
             document.getElementById('letterSelectionScreen').classList.remove('hidden'); 
             instructionText.textContent = `Izberi vrsto črk, ki jo želiš slediti!`; 
         } else {
@@ -698,7 +662,7 @@
         
         targetDisplay.textContent = nextItem; 
         
-        const namePart = childName ? `, ${childName}` : '';
+        const namePart = (childName && childName.length > 0) ? `, ${childName}` : '';
         instructionText.textContent = `Pripravi se na sledenje **${nextItem}**${namePart}! Začni risati, da zaženeš ${ITEM_DURATION_SECONDS}-sekundni časovnik.`;
         
         // Določanje stila Pisane pisave
@@ -737,7 +701,7 @@
             stopCountdown(); 
             
             const currentItem = lastCompletedItem || targetDisplay.textContent; 
-            const namePart = childName ? `, ${childName}` : '';
+            const namePart = (childName && childName.length > 0) ? `, ${childName}` : '';
             instructionText.textContent = `Risanje počiščeno. Začni ponovno sledenje **${currentItem}**${namePart}, da zaženeš ${ITEM_DURATION_SECONDS}-sekundni časovnik.`;
             
             messageBox.classList.add('hidden');
@@ -766,7 +730,7 @@
 
         if (!isTimerStarted) {
             startCountdown(ITEM_DURATION_SECONDS);
-             const namePart = childName ? `, ${childName}` : '';
+             const namePart = (childName && childName.length > 0) ? `, ${childName}` : '';
              const displayItem = targetDisplay.textContent; 
              instructionText.textContent = `Rišite in sledite **${displayItem}**${namePart}! Preostali čas: ${ITEM_DURATION_SECONDS}s`;
         }
@@ -808,7 +772,7 @@
 
         successOverlay.style.opacity = 1;
         checkIcon.classList.add('success-icon-animate');
-        safePlay(successSound); 
+        safePlay(null); 
         
         setTimeout(() => {
             targetDisplay.textContent = ''; 
@@ -817,7 +781,7 @@
             checkIcon.style.opacity = 0;
 
             rocketIcon.classList.add('rocket-animate'); 
-            safePlay(rocketSound); 
+            safePlay(null); 
             
             if (lastCompletedItem) {
                 if (!currentCategory.passedItems.includes(lastCompletedItem)) {
@@ -828,7 +792,6 @@
 
             setTimeout(() => {
                 successOverlay.style.opacity = 0;
-                rocketSound.pause(); 
                 displayNextRandomItem();
                 
             }, 2000); 
@@ -843,15 +806,15 @@
         checkIcon.style.opacity = 0;
         rocketIcon.style.opacity = 0;
         
+        // Prikaz pravilnega imena v konfetih
+        confettiChildName.textContent = (childName && childName.length > 0) ? childName : 'Ti';
         confettiText.classList.remove('hidden');
-        confettiChildName.textContent = childName || 'Prijatelj';
         
-        safePlay(prizeSound); 
+        safePlay(null); 
         startConfetti();
 
         setTimeout(() => {
             showCategories(); 
-            prizeSound.pause();
         }, 4000);
     }
     
@@ -877,10 +840,7 @@
         }
 
         updateChildName(); 
-        showCategories();
-        
-        const nameToSpeak = childName || 'Prijatelj';
-        speak(`Dobrodošel, ${nameToSpeak}! Zdaj si v pustolovščini sledenja! Izberi kategorijo!`);
+        showCategories(); // To poskrbi za prvi pravilni pozdrav in polje ostane prazno.
 
         initializeCanvas('PRINTED_LETTERS'); 
     });
