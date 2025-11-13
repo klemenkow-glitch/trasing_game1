@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pustolovščina Sledenja za Malčke</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* --- ODZIVNO OBLIKOVANJE IN PRILAGODITEV --- */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;700&display=swap');
+        /* Dodatna pisava za simulacijo pisanih črk (če je na voljo na napravi) */
+        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #eef2ff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Glavni vsebnik platna */
+        .canvas-container {
+            position: relative;
+            background-color: #ffffff;
+            border: 4px solid #4f46e5;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            width: min(95vh, 95vw);
+            max-width: 600px;
+            aspect-ratio: 1 / 1;
+            margin: 1rem auto;
+            touch-action: none;
+        }
+
+        #drawingCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+            z-index: 2;
+        }
+
+        /* Target Display (predloga) */
+        #targetDisplay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: min(20vw, 20vh, 15rem);
+            pointer-events: none;
+            line-height: 1;
+            z-index: 1;
+            font-family: 'Inter', sans-serif;
+
+            /* VIDEZ TANKIH ČRTEK/SVINČNIKA */
+            font-weight: 300;
+            
+            /* Ustvarjanje ORISA s prožno notranjostjo */
+            -webkit-text-stroke: 1.5px rgba(147, 197, 253, 0.8);
+            -webkit-text-fill-color: #FFFFFF; /* NOTRANJOST BELA (Barva ozadja) */
+            
+            color: rgba(147, 197, 253, 0.8);
+
+            text-rendering: optimizeLegibility;
+            text-shadow: none;
+        }
+        
+        /* Specifičen stil za pisane črke */
+        .cursive-font {
+            font-family: 'Dancing Script', cursive !important;
+            font-weight: 700 !important; /* Povečana debelina za boljši vtis */
+            /* Prilagoditev orisa za pisano pisavo */
+            -webkit-text-stroke: 1px rgba(100, 100, 100, 0.8);
+        }
+
+        #successOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        #confettiText {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #4f46e5;
+            margin-bottom: 20px;
+            animation: pulse 1s infinite alternate;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.05); }
+        }
+        
+        /* Animacije za uspeh in raketo */
+        .success-icon { opacity: 0; transition: opacity 0.3s; }
+        .success-icon-animate { animation: zoomIn 0.5s forwards; opacity: 1 !important; }
+        .rocket-animate { animation: zoomIn 0.5s forwards, rocketLaunch 2s 0.5s forwards; opacity: 1 !important; }
+        @keyframes zoomIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes rocketLaunch { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(-200%) rotate(0); opacity: 0; } }
+
+        /* Konfeti (simulacija) */
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f0f;
+            animation: fall linear infinite;
+            border-radius: 50%;
+        }
+        @keyframes fall {
+            0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0.5; }
+        }
+
+        .game-button {
+            transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+        .game-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px -2px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+
+</head>
+<body class="p-4">
+
+<audio id="successSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_249007ae08.mp3" preload="auto"></audio>
+<audio id="rocketSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_b287413669.mp3" preload="auto"></audio>
+<audio id="prizeSound" src="https://cdn.pixabay.com/audio/2022/03/10/audio_f551b96a84.mp3" preload="auto"></audio>
+
+    <header class="text-center mb-8 w-full max-w-xl">
+        <h1 class="text-3xl sm:text-4xl font-bold text-indigo-700">Pustolovščina Sledenja za Malčke</h1>
+        <p id="instructionText" class="text-gray-600 mt-2 text-lg sm:text-xl font-medium">Vnesite ime in izberite kategorijo!</p>
+    </header>
+
+    <div id="categoryScreen" class="flex flex-col space-y-4 w-full max-w-sm">
+        <input type="text" id="childNameInput" placeholder="Vnesite ime otroka"
+               class="w-full text-center p-3 text-lg border-2 border-indigo-500 rounded-xl mb-4 focus:outline-none focus:ring-4 focus:ring-indigo-300"
+               value=""
+               oninput="updateChildName()"/>
+
+        <button onclick="handleCategorySelection('Letters')" class="game-button bg-pink-500 hover:bg-pink-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition duration-150 ease-in-out">
+            🅰️🅱️ ABC Črke (Tiskane in Pisane)
+        </button>
+        <button onclick="handleCategorySelection('Numbers')" class="game-button bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition duration-150 ease-in-out">
+            1️⃣2️⃣ Števila (1-1000, poljuben obseg)
+        </button>
+        <button onclick="handleCategorySelection('Shapes')" class="game-button bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition duration-150 ease-in-out">
+            🔺🔵 Oblici (Izberite podkategorijo)
+        </button>
+    </div>
+    
+    <div id="numberSelectionScreen" class="hidden flex-col space-y-4 w-full max-w-sm">
+        <button onclick="showCategories()" class="game-button bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-150 ease-in-out text-sm sm:text-base mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+            </svg>
+            Nazaj na kategorije
+        </button>
+
+        <label class="text-lg font-medium text-gray-700 text-center">Izberite obseg številk (1 - 1000):</label>
+        <div class="flex space-x-2">
+            <input type="number" id="startNumberInput" placeholder="Od (npr. 1)" value="1" min="1" max="1000"
+                   class="w-1/2 p-3 text-lg border-2 border-green-500 rounded-xl focus:outline-none focus:ring-4 focus:ring-green-300 text-center"/>
+            <input type="number" id="endNumberInput" placeholder="Do (npr. 10)" value="10" min="1" max="1000"
+                   class="w-1/2 p-3 text-lg border-2 border-green-500 rounded-xl focus:outline-none focus:ring-4 focus:ring-green-300 text-center"/>
+        </div>
+        <div id="numberError" class="text-red-600 font-medium text-center hidden"></div>
+        <button onclick="startGame('Numbers')" class="game-button bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition duration-150 ease-in-out mt-4">
+            Začni Števile!
+        </button>
+    </div>
+    
+    <div id="shapeSelectionScreen" class="hidden flex-col space-y-4 w-full max-w-sm">
+        <button onclick="showCategories()" class="game-button bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-150 ease-in-out text-sm sm:text-base mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+            </svg>
+            Nazaj na kategorije
+        </button>
+        <label class="text-lg font-medium text-gray-700 text-center">Izberite vrsto oblik (10 sekund na obliko):</label>
+        
+        <button onclick="startGame('GEOMETRIC_SHAPES')" class="game-button bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition duration-150 ease-in-out">
+            🔺🔵 Geometrijske Oblike (Krog, Kvadrat, Trikotnik...)
+        </button>
+        <button onclick="startGame('ELEMENTS')" class="game-button bg-purple-500 hover:bg-purple-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition duration-150 ease-in-out">
+            ⭐❤️ Različni Elementi (Zvezda, Srce, Puščice...)
+        </button>
+    </div>
+
+
+    <div id="gameScreen" class="hidden w-full flex-grow flex flex-col items-center justify-center p-4">
+        <div id="messageBox" class="text-center mb-4 p-3 rounded-xl font-bold text-lg hidden w-full max-w-sm" role="alert"></div>
+
+        <div class="canvas-container">
+            <div id="countdownTimer" class="absolute top-2 right-2 text-xl font-bold text-red-500 z-50 p-2 bg-white rounded-lg shadow-md hidden"></div>
+            
+            <div id="targetDisplay"></div>
+            <canvas id="drawingCanvas"></canvas>
+            
+            <div id="successOverlay">
+                <svg id="checkIcon" xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 text-green-500 success-icon" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                
+                <svg id="rocketIcon" xmlns="http://www.w3.org/2000/svg" class="w-28 h-28 text-indigo-600 success-icon mt-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <defs>
+                        <linearGradient id="rocketFire" x1="12" y1="20" x2="12" y2="24" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#fcd34d" /> 
+                            <stop offset="50%" stop-color="#ef4444" /> 
+                            <stop offset="100%" stop-color="#be123c" /> 
+                        </linearGradient>
+                    </defs>
+                    
+                    <path fill="#9d9d9d" d="M12 2L9 6h6l-3-4z"/>
+                    <path fill="#cccccc" d="M9 6h6v10H9V6z"/>
+                    <path fill="#9d9d9d" d="M8 10h-2l1-4h3l-2 4zM16 10h2l-1-4h-3l2 4z"/>
+                    
+                    <circle cx="12" cy="9" r="2" fill="#4a90e2"/>
+                    
+                    <path fill="#7d7d7d" d="M8 16h-4l2 4h2l-2-4zM16 16h4l-2 4h-2l2-4z"/>
+                    
+                    <path fill="url(#rocketFire)" d="M11 16c0 2 1 4 1 6s1-4 1-6h-2z" />
+                    <path fill="url(#rocketFire)" d="M10 17c0 1.5 1 3 2 5s2-3.5 2-5h-4z" />
+                </svg>
+
+                <div id="confettiText" class="absolute hidden">
+                    BRAVO, <span id="confettiChildName"></span>! KONEC IGRE!
+                </div>
+            </div>
+        </div>
+
+        <div class="flex space-x-4 mt-8">
+            <button onclick="clearCanvas()" class="game-button bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-150 ease-in-out text-sm sm:text-base">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" />
+                </svg>
+                Počisti
+            </button>
+            <button id="nextItemButton" onclick="manualNextItem()" class="game-button bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-150 ease-in-out text-sm sm:text-base">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.02 8.72a1 1 0 01.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+                Naslednji (Preskok)
+            </button>
+            <button onclick="showCategories()" class="game-button bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-150 ease-in-out text-sm sm:text-base">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                </svg>
+                Domov
+            </button>
+            <button onclick="goBack()" class="game-button bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-150 ease-in-out text-sm sm:text-base">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+                Nazaj
+            </button>
+        </div>
+    </div>
+
+<script>
+    // --- Global Variables and Setup ---
+    // Tiskane črke (velike in male)
+    const ALPHABET_PRINTED = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'Č', 'Š', 'Ž', 'č', 'š', 'ž'];
+
+    const MAX_NUMBER = 1000;
+    const NUMBERS_ITEMS_FULL = Array.from({length: MAX_NUMBER}, (_, i) => (i + 1).toString()); 
+    
+    // ** RAZŠIRJENI NABORI OBLIK **
+    const GEOMETRIC_SHAPES = ['○', '☐', '△', '▽', '◇', '⬟', '⬢', '⬡', '⬧', '⬦', '⬚', '⬣', '◿', '◺', '◸', '◹', '◼', '◻', '▲', '▼', '◄', '►', '◂', '▸', '◆', '◈'];
+    const ELEMENTS = ['★', '❤️', '☁️', '☀️', '⭐', '⚡', '☂️', '❄️', '🎶', '🎵', '🏠', '🍎', '🔔', '📌', '💡', '❓', '❕', '❗', '➕', '➖', '➗', '✖'];
+    
+    // Pisane črke (Math Script Font za najboljši prikaz)
+    const CURSIVE_UPPER = ['𝒜', '𝐵', '𝒞', '𝒟', '𝐸', '𝐹', '𝒢', '𝐻', '𝐼', '𝒥', '𝒦', '𝐿', '𝑀', '𝒩', '𝒪', '𝒫', '𝒬', '𝑅', '𝒮', '𝒯', '𝒰', '𝒱', '𝒲', '𝒳', '𝒴', '𝒵'];
+    const CURSIVE_LOWER = ['𝒶', '𝒷', '𝒸', '𝒹', '𝑒', '𝒻', '𝑔', '𝒽', '𝒾', '𝒿', '𝓀', '𝓁', '𝓂', '𝓃', '𝑜', '𝓅', '𝓆', '𝓇', '𝓈', '𝓉', '𝓊', '𝓋', '𝓌', '𝓍', '𝓎', '𝓏'];
+    const CURSIVE_SL_ADDONS = ['Č', 'Š', 'Ž', 'č', 'š', 'ž'];
+
+    // ** ZDRUŽENA KATEGORIJA ČRK (Tiskane + Pisane) **
+    const ALL_LETTERS_COMBINED = ALPHABET_PRINTED.concat(CURSIVE_UPPER).concat(CURSIVE_LOWER).concat(CURSIVE_SL_ADDONS);
+
+    // Nabori za Categories
+    const CATEGORIES = {
+        'Letters': { items: ALL_LETTERS_COMBINED, passedItems: [] }, // ZDRUŽENA KATEGORIJA
+        'Numbers': { items: NUMBERS_ITEMS_FULL, passedItems: [] },
+        'GEOMETRIC_SHAPES': { items: GEOMETRIC_SHAPES, passedItems: [] },
+        'ELEMENTS': { items: ELEMENTS, passedItems: [] }
+    };
+    
+    // ** PARAMETER ČASOVNIKA **
+    const ITEM_DURATION_SECONDS = 10;
+    let itemTimer = null; 
+    let countdownInterval = null; 
+    let isTimerStarted = false; 
+    let timeRemaining = ITEM_DURATION_SECONDS;
+    const LS_PASS_KEY = 'tracingGamePasssedItems'; // Ključ za LocalStorage (trajnost)
+
+    // DOM elementi
+    const canvas = document.getElementById('drawingCanvas');
+    const ctx = canvas.getContext('2d');
+    const targetDisplay = document.getElementById('targetDisplay');
+    const instructionText = document.getElementById('instructionText');
+    const messageBox = document.getElementById('messageBox');
+    const childNameInput = document.getElementById('childNameInput');
+    const startNumberInput = document.getElementById('startNumberInput');
+    const endNumberInput = document.getElementById('endNumberInput');
+    const numberErrorDiv = document.getElementById('numberError');
+    const countdownTimerDisplay = document.getElementById('countdownTimer');
+
+    const successOverlay = document.getElementById('successOverlay');
+    const checkIcon = document.getElementById('checkIcon');
+    const rocketIcon = document.getElementById('rocketIcon');
+    const confettiText = document.getElementById('confettiText');
+    const confettiChildName = document.getElementById('confettiChildName');
+    
+    const successSound = document.getElementById('successSound');
+    const rocketSound = document.getElementById('rocketSound');
+    const prizeSound = document.getElementById('prizeSound');
+
+    let isDrawing = false;
+    let currentCategory = null;
+    let categoryKey = ''; 
+    let childName = "";
+    let lastCompletedItem = null; // Element, ki je trenutno na zaslonu
+    let navigationHistory = []; // Zgodovina za gumb Nazaj
+    
+    const CATEGORY_INSTRUCTION_TEXT = "Vnesite ime in izberite kategorijo!";
+    
+    // Inicializacija glasu (ženski glas)
+    let FemaleVoice = null;
+    window.speechSynthesis.onvoiceschanged = () => {
+        // 1. Poskušamo najti ženski slovenski glas
+        FemaleVoice = window.speechSynthesis.getVoices().find(voice => voice.lang === 'sl-SI' && (voice.name.toLowerCase().includes('female') || voice.name.toLowerCase().includes('žena')));
+        
+        // 2. Rezervna možnost: Poišči kateri koli ženski glas
+        if (!FemaleVoice) {
+            FemaleVoice = window.speechSynthesis.getVoices().find(voice => voice.name.toLowerCase().includes('female') || voice.name.toLowerCase().includes('žena'));
+        }
+    };
+
+
+    // --- FUNKCIJA ZA ROBUSTNO PREDVAJANJE ZVOKA ---
+    function safePlay(audioElement) {
+        if (!audioElement) return;
+        audioElement.pause();
+        audioElement.currentTime = 0;
+        
+        const playPromise = audioElement.play();
+
+        if (playPromise !== undefined) {
+            playPromise.then(_ => {
+            }).catch(error => {
+                console.warn("Audio playback blocked or failed. User interaction might be required.", error);
+            });
+        }
+    }
+    
+    // --- FUNKCIJA GOVORA (TTS) ---
+    function speak(text) {
+        if (!('speechSynthesis' in window)) {
+            console.log("Govorna sinteza ni podprta v tem brskalniku.");
+            return;
+        }
+        window.speechSynthesis.cancel(); // Prekine prejšnji govor
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'sl-SI';
+        if (FemaleVoice) {
+            utterance.voice = FemaleVoice;
+        } else {
+             // Če ni našel ženskega, se poskusi s slovenskim jezikom
+             utterance.lang = 'sl-SI'; 
+        }
+        
+        // Zavarovanje z zamikom za inicializacijo glasu
+        setTimeout(() => {
+             window.speechSynthesis.speak(utterance);
+        }, 100); 
+    }
+    
+    // --- KONFETI (SIMULACIJA) ---
+    let confettiInterval = null;
+    const confettiColors = ['#f0f', '#0ff', '#ff0', '#0f0', '#f00', '#00f'];
+
+    function createConfetti() {
+        const piece = document.createElement('div');
+        piece.classList.add('confetti');
+        piece.style.left = `${Math.random() * 100}vw`;
+        piece.style.backgroundColor = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+        piece.style.animationDuration = `${Math.random() * 2 + 1}s`;
+        piece.style.opacity = Math.random().toString();
+        document.body.appendChild(piece);
+
+        setTimeout(() => {
+            piece.remove();
+        }, 3000); 
+    }
+
+    function startConfetti() {
+        confettiInterval = setInterval(createConfetti, 50);
+        setTimeout(stopConfetti, 3500);
+    }
+
+    function stopConfetti() {
+        clearInterval(confettiInterval);
+        confettiInterval = null;
+        document.querySelectorAll('.confetti').forEach(c => c.remove());
+    }
+    
+    // --- FUNKCIJE ZA SHRANJEVANJE IN NALAGANJE ---
+    function saveGameProgress(key, itemsToSave) {
+        if (!key) return;
+        
+        const savedProgress = JSON.parse(localStorage.getItem(LS_PASS_KEY) || '{}');
+        savedProgress[key] = itemsToSave; 
+        localStorage.setItem(LS_PASS_KEY, JSON.stringify(savedProgress));
+    }
+
+    function loadGameProgress(key) {
+        if (!key) return [];
+        
+        const savedProgress = JSON.parse(localStorage.getItem(LS_PASS_KEY) || '{}');
+        return savedProgress[key] || [];
+    }
+
+    // --- POMOŽNE FUNKCIJE NADALJEVANJA IGRE ---
+    
+    /** Izbere naključen element iz preostalega nabora. */
+    function getRandomItem(sourceArray, passedArray) {
+        const remainingItems = sourceArray.filter(item => !passedArray.includes(item));
+        if (remainingItems.length === 0) return null;
+
+        const randomIndex = Math.floor(Math.random() * remainingItems.length);
+        return remainingItems[randomIndex];
+    }
+    
+    // --- FUNKCIJE ČASOVNIKA ---
+    
+    function startCountdown(duration) {
+        stopCountdown();
+
+        timeRemaining = duration;
+        countdownTimerDisplay.textContent = `Preostali čas: ${timeRemaining}s`;
+        countdownTimerDisplay.classList.remove('hidden');
+        isTimerStarted = true; 
+
+        itemTimer = setTimeout(() => {
+            stopCountdown();
+            triggerSuccessAnimationAndNextItem(); // Avtomatski prehod
+        }, duration * 1000);
+
+        countdownInterval = setInterval(() => {
+            timeRemaining--;
+            if (timeRemaining >= 0) {
+                 countdownTimerDisplay.textContent = `Preostali čas: ${timeRemaining}s`;
+            } else {
+                clearInterval(countdownInterval);
+            }
+        }, 1000);
+    }
+
+    function stopCountdown() {
+        if (itemTimer) clearTimeout(itemTimer);
+        if (countdownInterval) clearInterval(countdownInterval);
+        itemTimer = null;
+        countdownInterval = null;
+        isTimerStarted = false; 
+        countdownTimerDisplay.classList.add('hidden');
+    }
+
+    // --- FUNKCIJE ZA UPRAVLJANJE ZASLONA ---
+
+    function updateChildName() {
+        childName = childNameInput.value.trim();
+        localStorage.setItem('childName', childName);
+    }
+
+    function showCategories() {
+        // Shranimo TRENUTNI element, če je bil viden, a ne potrjen, ob pritisku DOMOV.
+        if (currentCategory && categoryKey && lastCompletedItem && !currentCategory.passedItems.includes(lastCompletedItem)) {
+            currentCategory.passedItems.push(lastCompletedItem);
+            saveGameProgress(categoryKey, currentCategory.passedItems);
+        }
+        
+        document.getElementById('gameScreen').classList.add('hidden');
+        document.getElementById('numberSelectionScreen').classList.add('hidden');
+        document.getElementById('shapeSelectionScreen').classList.add('hidden');
+        document.getElementById('categoryScreen').classList.remove('hidden');
+        
+        stopCountdown(); 
+        
+        // **POZDRAV OB VKLOPU (SAMO TEXT)**
+        const nameToUse = childName || 'Prijatelj';
+        instructionText.textContent = `Dobrodošel, ${nameToUse}! Izberi kategorijo!`;
+
+        messageBox.classList.add('hidden');
+        numberErrorDiv.classList.add('hidden');
+        successOverlay.style.opacity = 0; 
+        stopConfetti(); 
+        
+        // Reset elementov po izhodu
+        currentCategory = null; 
+        categoryKey = '';
+        lastCompletedItem = null;
+        navigationHistory = []; // Ponastavi zgodovino
+    }
+    
+    function goBack() {
+        // Shranimo trenutno stanje v passedItems, preden zapustimo zaslon igre
+        if (currentCategory && categoryKey && lastCompletedItem && !currentCategory.passedItems.includes(lastCompletedItem)) {
+            currentCategory.passedItems.push(lastCompletedItem);
+            saveGameProgress(categoryKey, currentCategory.passedItems);
+        }
+        
+        stopCountdown();
+        
+        const lastScreen = navigationHistory.pop();
+        
+        document.getElementById('gameScreen').classList.add('hidden');
+        document.getElementById('numberSelectionScreen').classList.add('hidden');
+        document.getElementById('shapeSelectionScreen').classList.add('hidden');
+
+        if (lastScreen === 'numberSelectionScreen') {
+            document.getElementById('numberSelectionScreen').classList.remove('hidden');
+            instructionText.textContent = `Izberi obseg za Številke (10 sekund na številko)!`; 
+        } else if (lastScreen === 'shapeSelectionScreen') {
+            document.getElementById('shapeSelectionScreen').classList.remove('hidden');
+            instructionText.textContent = `Izberi vrsto oblik, ki jo želiš slediti!`; 
+        } else {
+            showCategories(); // Pojdi na glavni zaslon kategorij
+        }
+        
+        // Ob povratku se lastCompletedItem izniči
+        lastCompletedItem = null;
+        currentCategory = null;
+        categoryKey = '';
+    }
+
+    function handleCategorySelection(key) {
+        if (key === 'Numbers') {
+            document.getElementById('categoryScreen').classList.add('hidden');
+            document.getElementById('numberSelectionScreen').classList.remove('hidden');
+            instructionText.textContent = `Izberi obseg za Števile (10 sekund na številko)!`; 
+            navigationHistory.push('categoryScreen');
+        } else if (key === 'Shapes') {
+            document.getElementById('categoryScreen').classList.add('hidden');
+            document.getElementById('shapeSelectionScreen').classList.remove('hidden');
+            instructionText.textContent = `Izberi vrsto oblik, ki jo želiš slediti!`; 
+            navigationHistory.push('categoryScreen');
+        } else if (key === 'Letters') { 
+            // **POPRAVEK:** Črke vodijo direktno v igro (ZDRUŽENA KATEGORIJA)
+            navigationHistory.push('categoryScreen'); 
+            startGame('Letters');
+        } else {
+            // Zagon iz pod-zaslona (GEOMETRIC_SHAPES ali ELEMENTS)
+            
+            // Shranjevanje prejšnjega zaslona za Nazaj
+            if (document.getElementById('numberSelectionScreen').classList.contains('hidden') === false) {
+                 navigationHistory.push('numberSelectionScreen');
+            } else if (document.getElementById('shapeSelectionScreen').classList.contains('hidden') === false) {
+                 navigationHistory.push('shapeSelectionScreen');
+            }
+            startGame(key);
+        }
+    }
+
+    function startGame(key) {
+        // Izberemo pravi nabor elementov
+        if (key === 'Letters') currentCategory = CATEGORIES.Letters; // ZDRUŽENA
+        else if (key === 'GEOMETRIC_SHAPES') currentCategory = CATEGORIES.GEOMETRIC_SHAPES;
+        else if (key === 'ELEMENTS') currentCategory = CATEGORIES.ELEMENTS;
+        else if (key === 'Numbers') {
+            currentCategory = CATEGORIES.Numbers;
+            
+            let start = parseInt(startNumberInput.value);
+            let end = parseInt(endNumberInput.value);
+
+            if (isNaN(start) || isNaN(end) || start < 1 || end > MAX_NUMBER || start > end) {
+                numberErrorDiv.textContent = "Neveljaven obseg. Od (1) mora biti manjši od Do (1000).";
+                numberErrorDiv.classList.remove('hidden');
+                return; 
+            }
+            numberErrorDiv.classList.add('hidden');
+            
+            currentCategory.items = NUMBERS_ITEMS_FULL.slice(start - 1, end);
+            document.getElementById('numberSelectionScreen').classList.add('hidden');
+        }
+
+        categoryKey = key;
+        
+        // Naloži shranjeni napredek in ga priloži
+        currentCategory.passedItems = loadGameProgress(key); 
+
+        // SKRIJ VSE ZASLONE
+        document.getElementById('categoryScreen').classList.add('hidden');
+        document.getElementById('shapeSelectionScreen').classList.add('hidden');
+        document.getElementById('numberSelectionScreen').classList.add('hidden');
+        document.getElementById('gameScreen').classList.remove('hidden');
+
+        // Določanje debeline pisala (Canvas line width) glede na kategorijo
+        initializeCanvas(key); 
+        displayNextRandomItem(); 
+        
+        // **NAVODILO ZA IGRO**
+        // Namerno odstranimo speak() klic tukaj
+        // (Prej: speak("Dobro, čas za črke! Sledi potegu na zaslonu.");)
+    }
+
+    function displayNextRandomItem() {
+        const nextItem = getRandomItem(currentCategory.items, currentCategory.passedItems);
+        
+        stopCountdown(); 
+
+        if (nextItem === null) {
+            // Vsi elementi so obdelani! Ponastavimo shranjen napredek in prikažemo nagrado.
+            saveGameProgress(categoryKey, []); // Prazna lista -> končano
+            triggerEndGameAnimation();
+            return;
+        }
+
+        // Shranimo TRENUTNI element v lastCompletedItem, preden se prikaže
+        lastCompletedItem = nextItem; 
+        targetDisplay.textContent = nextItem;
+        
+        const namePart = childName ? `, ${childName}` : '';
+        // Navodilo za zagon časovnika
+        instructionText.textContent = `Pripravi se na sledenje **${nextItem}**${namePart}! Začni risati, da zaženeš ${ITEM_DURATION_SECONDS}-sekundni časovnik.`;
+        
+        // Dinamično nastavi font za pisane črke
+        const isCursive = CURSIVE_UPPER.includes(nextItem) || CURSIVE_LOWER.includes(nextItem);
+        
+        if (isCursive) {
+             targetDisplay.classList.add('cursive-font');
+        } else {
+             targetDisplay.classList.remove('cursive-font');
+        }
+        
+        clearCanvas();
+    }
+    
+    // --- FUNKCIJE PLATNA (Canvas) in RISANJA ---
+
+    function initializeCanvas(key) {
+        const container = canvas.parentElement;
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+
+        // **KLJUČNA SPREMEMBA: Dinamična debelina pisala**
+        if (key === 'ELEMENTS') {
+             ctx.lineWidth = 8; // Za podrobne elemente (emojije)
+        } else {
+             ctx.lineWidth = 14; // Za črke, števila, geometrijske oblike
+        }
+        
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#4f46e5';
+        clearCanvas();
+    }
+
+    function clearCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        if (currentCategory && document.getElementById('gameScreen').classList.contains('hidden') === false) {
+            stopDrawing();
+            stopCountdown(); 
+            
+            const currentItem = targetDisplay.textContent;
+            const namePart = childName ? `, ${childName}` : '';
+            instructionText.textContent = `Risanje počiščeno. Začni ponovno sledenje **${currentItem}**${namePart}, da zaženeš ${ITEM_DURATION_SECONDS}-sekundni časovnik.`;
+            
+            messageBox.classList.add('hidden');
+        } else {
+            messageBox.classList.add('hidden');
+        }
+    }
+
+    function getMousePos(event) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = event.clientX !== undefined ? event.clientX : event.touches[0].clientX;
+        const clientY = event.clientY !== undefined ? event.clientY : event.touches[0].clientY;
+        
+        return {
+            x: clientX - rect.left,
+            y: clientY - rect.top
+        };
+    }
+
+    function startDrawing(event) {
+        isDrawing = true;
+        const pos = getMousePos(event);
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+        event.preventDefault();
+
+        // **ZAČNI ČASOVNIK SAMO PRI PRVEM DOTIKU**
+        if (!isTimerStarted) {
+            startCountdown(ITEM_DURATION_SECONDS);
+             const namePart = childName ? `, ${childName}` : '';
+             instructionText.textContent = `Rišite in sledite **${targetDisplay.textContent}**${namePart}! Preostali čas: ${ITEM_DURATION_SECONDS}s`;
+        }
+    }
+
+    function draw(event) {
+        if (!isDrawing) return;
+        const pos = getMousePos(event);
+        
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+        
+        event.preventDefault();
+    }
+
+    function stopDrawing() {
+        isDrawing = false;
+        ctx.closePath();
+    }
+
+    function manualNextItem() {
+        if (!currentCategory) return;
+        
+        stopDrawing();
+        stopCountdown(); 
+        triggerSuccessAnimationAndNextItem();
+    }
+    
+    // Univerzalna funkcija za animacijo in prehod
+    function triggerSuccessAnimationAndNextItem() {
+        if (successOverlay.style.opacity == 1) return;
+
+        stopCountdown(); 
+
+        // 0. Ponastavi animacijo
+        checkIcon.classList.remove('success-icon-animate');
+        rocketIcon.classList.remove('rocket-animate');
+        checkIcon.style.opacity = 0;
+        rocketIcon.style.opacity = 0;
+        confettiText.classList.add('hidden'); 
+
+        // 1. Prikaži Overlay in Checkmark
+        successOverlay.style.opacity = 1;
+        checkIcon.classList.add('success-icon-animate');
+        safePlay(successSound); 
+        
+        // 2. Po 1 sekundi sproži animacijo rakete
+        setTimeout(() => {
+            targetDisplay.textContent = ''; 
+
+            // Animacija rakete velja za vse kategorije
+            checkIcon.classList.remove('success-icon-animate'); 
+            checkIcon.style.opacity = 0;
+
+            rocketIcon.classList.add('rocket-animate'); 
+            safePlay(rocketSound); 
+            
+            // **SHRANJEVANJE IN DODAJANJE V PASSED ITEMS**
+            if (lastCompletedItem) {
+                if (!currentCategory.passedItems.includes(lastCompletedItem)) {
+                    currentCategory.passedItems.push(lastCompletedItem);
+                }
+                // Takoj shranimo posodobljen nabor
+                saveGameProgress(categoryKey, currentCategory.passedItems); 
+            }
+
+            // 3. Po koncu animacije naloži nov element ali zaključi igru
+            setTimeout(() => {
+                successOverlay.style.opacity = 0;
+                rocketSound.pause(); 
+                displayNextRandomItem();
+                
+            }, 2000); // 2s za raketo
+            
+        }, 1000); // 1s za kljukico
+    }
+
+    function triggerEndGameAnimation() {
+        // Ko se igra konča, nagrada se prikaže.
+        
+        document.getElementById('gameScreen').classList.add('hidden');
+
+        successOverlay.style.opacity = 1;
+        checkIcon.style.opacity = 0;
+        rocketIcon.style.opacity = 0;
+        
+        confettiText.classList.remove('hidden');
+        confettiChildName.textContent = childName || 'Prijatelj';
+        
+        safePlay(prizeSound); 
+        startConfetti();
+
+        // Po 4 sekundah se vrni na DOMOV
+        setTimeout(() => {
+            showCategories(); 
+            prizeSound.pause();
+        }, 4000);
+    }
+    
+    // --- EVENT LISTENERS in ZAGON APLIKACIJE ---
+    
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseleave', stopDrawing);
+    canvas.addEventListener('touchstart', startDrawing);
+    canvas.addEventListener('touchmove', draw);
+    canvas.addEventListener('touchend', stopDrawing);
+    canvas.addEventListener('touchcancel', stopDrawing);
+
+    window.addEventListener('resize', initializeCanvas);
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // NALAGANJE IMENA IZ LOCAL STORAGE OB ZAGONU
+        const savedName = localStorage.getItem('childName');
+        if (savedName) {
+            childNameInput.value = savedName;
+            childName = savedName;
+        }
+
+        updateChildName();
+        showCategories();
+        
+        // **KLJUČNO POPRAVILO: SAMO EN GOVOR OB ZAGONU**
+        const nameToSpeak = childName || 'Prijatelj';
+        speak(`Dobrodošel, ${nameToSpeak}! Zdaj si v pustolovščini sledenja! Izberi kategorijo!`);
+
+        initializeCanvas('Letters'); 
+    });
+
+</script>
+</body>
+</html>
