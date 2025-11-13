@@ -160,7 +160,7 @@
             #gameScreen .flex.space-x-4 > button {
                 padding: 0.5rem 0.75rem; 
                 font-size: 0.875rem; 
-                min-width: 45%; 
+                min-width: 44%; 
             }
             #nextItemButton {
                 min-width: 100%; 
@@ -191,7 +191,7 @@
             1️⃣2️⃣ Števila (1-1000, poljuben obseg)
         </button>
         <button onclick="handleCategorySelection('Shapes')" class="game-button bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition duration-150 ease-in-out">
-            🔺🔵 Oblike (Izberite podkategorijo)
+            🔺🔵 Oblici (Izberite podkategorijo)
         </button>
     </div>
     
@@ -834,12 +834,13 @@
     document.addEventListener('DOMContentLoaded', () => {
         const savedName = localStorage.getItem('childName');
         
-        // 1. Naloži shranjeno ime v globalno spremenljivko `childName`
+        // 1. Naloži shranjeno ime v globalno spremenljivko `childName` ob zagonu
         if (savedName) {
             childName = savedName; 
         }
-
-        updateChildName(); 
+        
+        // ODSTRANJENO: updateChildName(); - Da ne prepiše shranjenega imena s praznim poljem ob zagonu
+        
         showCategories(); // To poskrbi za prvi pravilni pozdrav in polje ostane prazno.
 
         initializeCanvas('PRINTED_LETTERS'); 
@@ -848,4 +849,3 @@
 </script>
 </body>
 </html>
-
