@@ -142,6 +142,7 @@
         }
 
         /* Prilagoditev gumbov za mobilne naprave */
+        /* To zagotavlja, da se na mobilnih lepo prelomijo */
         #gameScreen .flex.space-x-4 {
             display: flex;
             flex-wrap: wrap; 
@@ -156,6 +157,7 @@
             min-width: 120px; 
         }
 
+        /* Media Query za mobilne */
         @media (max-width: 640px) {
             #gameScreen .flex.space-x-4 > button {
                 padding: 0.5rem 0.75rem; 
@@ -164,6 +166,13 @@
             }
             #nextItemButton {
                 min-width: 100%; 
+            }
+        }
+        /* POPRAVEK ZA LAPTOP: Zmanjšamo min-width in dovolimo, da se fleksibilno prilagodijo*/
+        @media (min-width: 641px) {
+             #gameScreen .flex.space-x-4 > button {
+                min-width: 100px; /* Manjši minimalni prostor za vsak gumb */
+                flex-grow: 1;
             }
         }
     </style>
@@ -298,7 +307,7 @@
             </div>
         </div>
 
-        <div class="flex space-x-4 mt-8">
+        <div class="flex space-x-4 mt-8 w-full max-w-lg flex-wrap justify-center">
             <button onclick="clearCanvas()" class="game-button bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-150 ease-in-out text-sm sm:text-base">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" />
@@ -679,6 +688,7 @@
     
     function initializeCanvas(key) {
         const container = canvas.parentElement;
+        // KLJUČNA IZBOLJŠAVA ZA ODZIVNOST: Velikost platna se prilagodi VSEBNIKU
         canvas.width = container.clientWidth;
         canvas.height = container.clientHeight;
 
@@ -712,8 +722,9 @@
 
     function getMousePos(event) {
         const rect = canvas.getBoundingClientRect();
-        const clientX = event.clientX !== undefined ? event.clientX : event.touches[0].clientX;
-        const clientY = event.clientY !== undefined ? event.clientY : event.touches[0].clientY;
+        // Preveri, ali gre za dogodek na dotik (touches) ali miško (clientX)
+        const clientX = event.clientX !== undefined ? event.clientX : (event.touches[0] ? event.touches[0].clientX : event.changedTouches[0].clientX);
+        const clientY = event.clientY !== undefined ? event.clientY : (event.touches[0] ? event.touches[0].clientY : event.changedTouches[0].clientY);
         
         return {
             x: clientX - rect.left,
@@ -834,14 +845,13 @@
     document.addEventListener('DOMContentLoaded', () => {
         const savedName = localStorage.getItem('childName');
         
-        // 1. Naloži shranjeno ime v globalno spremenljivko `childName` ob zagonu
+        // Naloži shranjeno ime v globalno spremenljivko `childName` ob zagonu
         if (savedName) {
             childName = savedName; 
         }
         
-        // ODSTRANJENO: updateChildName(); - Da ne prepiše shranjenega imena s praznim poljem ob zagonu
-        
-        showCategories(); // To poskrbi za prvi pravilni pozdrav in polje ostane prazno.
+        // showCategories poskrbi za pravilno nalaganje imena v pozdrav in da je polje prazno.
+        showCategories(); 
 
         initializeCanvas('PRINTED_LETTERS'); 
     });
